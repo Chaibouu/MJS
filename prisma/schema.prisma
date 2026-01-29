@@ -1,0 +1,663 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  ASSOCIATION
+}
+
+enum JobType {
+  STAGE
+  EMPLOI
+  VOLONTARIAT
+  CDD
+  CDI
+  CDD_RENOUVELABLE
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  ACCEPTED
+  REJECTED
+  ARCHIVED
+}
+
+enum EducationLevel {
+  BAC
+  BTS
+  LICENCE
+  MASTER
+  DOCTORAT
+  BREVET
+  AUTRE
+}
+
+enum Sex {
+  MASCULIN
+  FEMININ
+}
+
+enum NigerLanguage {
+  FRANCAIS
+  HAOUSSA
+  ZARMA
+  TAMASHEQ
+  KANURI
+  FULFULDE
+  GOURMANTCHE
+  ARABE
+  TOUBOU
+  BUDUMA
+  TASSAWAQ
+  ANGLAIS
+  TAGDALT
+}
+
+enum NigerRegion {
+  AGADEZ
+  DIFFA
+  DOSSO
+  MARADI
+  NIAMEY
+  TAHOUA
+  TILLABERI
+  ZINDER
+}
+
+enum NigerDepartment {
+    // Région d'Agadez
+    ARLIT
+    BILMA
+    IFEROUANE
+    INGALL
+    TCHIROZERINE
+    ADERBISSINAT
+
+    // Région de Diffa
+    DIFFA
+    MAINE_SOROA
+    NGUIGMI
+    GOUDOUMARIA
+    BOSSO
+
+    // Région de Dosso
+    BOBOYE
+    DOGONDOUTCHI
+    DOSSO
+    GAYA
+    LOGA
+    TIBIRI
+    DIOUNDIOU
+    FALMEY
+
+    // Région de Maradi
+    AGUIE
+    DAKORO
+    GUIDAN_ROUMDJI
+    MADAROUNFA
+    MAYAHI
+    TESSAOUA
+    BERMO
+    GAZAOUA
+
+    // Région de Niamey (Communauté Urbaine)
+    NIAMEY_I
+    NIAMEY_II
+    NIAMEY_III
+    NIAMEY_IV
+    NIAMEY_V
+
+    // Région de Tahoua
+    ABALAK
+    BIRNI_NKONNI
+    BOUZA
+    ILLELA
+    KEITA
+    MADAOUA
+    TAHOUA
+    TCHINTABARADEN
+    BAGAROUA
+    MALBAZA
+    TASSARA
+    TILLIA
+
+    // Région de Tillabéri
+    FILINGUE
+    KOLLO
+    OUALLAM
+    SAY
+    TERA
+    TILLABERI
+    ABALA
+    AYEROU
+    BALLEYARA
+    BANIBANGOU
+    BANKILARE
+    GOTHEYE
+    TORODI
+
+    // Région de Zinder
+    GOURE
+    MAGARIA
+    MATAMEYE
+    MIRRIAH
+    TANOUT
+    ZINDER
+    BELBEDJI
+    DAMAGARAM_TAKAYA
+    DUNGASS
+    KANTCHE
+    TAKEITA
+}
+
+enum LocationType {
+  REMOTE
+  ONSITE
+  HYBRID
+}
+
+enum DisabilityType {
+  PHYSICAL
+  MENTAL
+  VISUAL
+  AUDITORY
+  OTHER
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  firstName             String?
+  lastName              String?
+  email                 String?                @unique
+  emailVerified         DateTime?
+  image                 String?
+  profilePicture        String?
+  headerPicture         String?
+  phone                 String?
+  address               String?
+  bio                   String?
+  sexe                  Sex?
+  nigerLanguage         NigerLanguage[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  password              String?
+  role                  UserRole               @default(USER)
+  isActive              Boolean                @default(true)
+  deactivatedAt         DateTime?
+  isTwoFactorEnabled    Boolean                @default(false)
+  isDeleted             Boolean                @default(false)
+  twoFactorConfirmation TwoFactorConfirmation?
+  accounts              Account[]
+  sessions              Session[]
+  userDevices           UserDevice[]
+  failedLoginAttempts   FailedLoginAttempt[]
+  blogs                 Blog[]
+  blogPosts             BlogPost[]
+  graduateProfile       Jeune?
+  actualitesCreated     Actualite[] @relation("ActualiteCreatedBy")
+  actualitesUpdated     Actualite[] @relation("ActualiteUpdatedBy")
+  actualitesDeleted     Actualite[] @relation("ActualiteDeletedBy")
+  articlesCreated      Article[]   @relation("ArticleCreatedBy")
+  articlesUpdated      Article[]   @relation("ArticleUpdatedBy")
+  articlesDeleted      Article[]   @relation("ArticleDeletedBy")
+  projetsCreated       Projet[]    @relation("ProjetCreatedBy")
+  projetsUpdated       Projet[]    @relation("ProjetUpdatedBy")
+  projetsDeleted       Projet[]    @relation("ProjetDeletedBy")
+  mediasCreated        Media[]     @relation("MediaCreatedBy")
+  mediasUpdated        Media[]     @relation("MediaUpdatedBy")
+  mediasDeleted        Media[]     @relation("MediaDeletedBy")
+  association          Association?
+  associationsCreated  Association[] @relation("AssociationCreatedBy")
+  associationsUpdated  Association[] @relation("AssociationUpdatedBy")
+  associationsDeleted  Association[] @relation("AssociationDeletedBy")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id                  String   @id @default(cuid())
+  userId              String
+  sessionToken        String   @unique
+  refreshToken        String   @unique
+  expires             DateTime
+  refreshTokenExpires DateTime
+  lastActivity        DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String
+  userId  String?
+  token   String   @unique
+  expires DateTime
+  tokenId String   @unique
+
+  @@unique([email, token])
+}
+
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+  tokenId String   @unique
+
+  @@unique([email, token])
+}
+
+model TwoFactorToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorConfirmation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model FailedLoginAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attemptAt DateTime @default(now())
+}
+
+model UserDevice {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device    String?
+  os        String?
+  browser   String?
+  ipAddress String?
+  latitude  Float?
+  longitude Float?
+  city      String?
+  country   String?
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json
+  status      String    @default("PENDING")
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+}
+
+model Setting {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  value          String
+  description    String?
+  isCustomizable Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AdminOverrideLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  targetUser String
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+model Blog {
+  id          String    @id @default(cuid())
+  title       String    @db.VarChar(255)
+  description String?   @db.Text
+  slug        String    @unique @db.VarChar(255)
+  isPublished Boolean   @default(false)
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
+  authorId String
+  author   User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  posts    BlogPost[]
+
+  @@map("blogs")
+}
+
+model BlogPost {
+  id          String    @id @default(cuid())
+  title       String    @db.VarChar(255)
+  content     String    @db.Text
+  excerpt     String?   @db.Text
+  slug        String    @unique @db.VarChar(255)
+  isPublished Boolean   @default(false)
+  isDeleted   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  blogId   String
+  blog     Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("blog_posts")
+}
+
+model Diplome {
+  id              String            @id @default(cuid())
+  name            String            @unique
+  isDeleted       Boolean           @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?
+  education       Education[]
+  graduateProfile Jeune[]
+}
+
+model Actualite {
+  id          String    @id @default(cuid())
+  title       String    @db.VarChar(255)
+  description String?   @db.Text
+  link        String?   @db.VarChar(500)
+  image       String?   @db.VarChar(500)
+  gallery     Json?     // [ "/api/uploads/actualites/gallery/{id}/f1.jpg", ... ]
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  deletedBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  createdByUser User?   @relation("ActualiteCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser User?   @relation("ActualiteUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  deletedByUser User?   @relation("ActualiteDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@map("actualites")
+}
+
+model Article {
+  id            String    @id @default(cuid())
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+  link          String?   @db.VarChar(500)
+  image         String?   @db.VarChar(500)
+  gallery       Json?     // [ "/api/uploads/articles/gallery/{id}/f1.jpg", ... ]
+  isDeleted     Boolean   @default(false)
+  deletedAt     DateTime?
+  deletedBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  createdByUser User?     @relation("ArticleCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser User?     @relation("ArticleUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  deletedByUser User?     @relation("ArticleDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@map("articles")
+}
+
+model Projet {
+  id            String    @id @default(cuid())
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+  link          String?   @db.VarChar(500)
+  image         String?   @db.VarChar(500)
+  gallery       Json?     // [ "/api/uploads/projets/gallery/{id}/f1.jpg", ... ]
+  isDeleted     Boolean   @default(false)
+  deletedAt     DateTime?
+  deletedBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  createdByUser User?     @relation("ProjetCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser User?     @relation("ProjetUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  deletedByUser User?     @relation("ProjetDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@map("projets")
+}
+
+model Media {
+  id            String    @id @default(cuid())
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+  gallery       Json?     // [ "/api/uploads/medias/gallery/{id}/f1.jpg", ... ] — photos d'événements
+  isDeleted     Boolean   @default(false)
+  deletedAt     DateTime?
+  deletedBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  createdByUser User?     @relation("MediaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser User?     @relation("MediaUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  deletedByUser User?     @relation("MediaDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@map("medias")
+}
+
+model Association {
+  id                        String    @id @default(cuid())
+  nomOfficiel               String    @db.VarChar(255)
+  description               String?   @db.Text
+  emailContact              String    @db.VarChar(255)
+  numeroRecepisse           String?   @db.VarChar(120)
+  autoriteReconnaissance    String?   @db.VarChar(255)
+  statutJuridique           String?   @db.VarChar(80)
+  logoPath                  String?   @db.VarChar(500)
+  statutsPath               String?   @db.VarChar(500)
+  reglementInterieurPath    String?   @db.VarChar(500)
+  recepissePath             String?   @db.VarChar(500)
+  pvCreationPath            String?   @db.VarChar(500)
+  nombreMembres             Int?
+  impactSocial              String?   @db.Text
+  dateCreation              DateTime?
+  pays                      String?   @db.VarChar(100)
+  region                    String?   @db.VarChar(100)
+  villeCommune              String?   @db.VarChar(120)
+  quartier                  String?   @db.VarChar(120)
+  adressePhysique           String?   @db.Text
+  telephonePrincipal        String?   @db.VarChar(50)
+  telephoneSecondaire       String?   @db.VarChar(50)
+  emailOfficiel             String?   @db.VarChar(255)
+  siteWeb                   String?   @db.VarChar(500)
+  reseauxSociaux            Json?
+  domaineIntervention       String?   @db.VarChar(120)
+  missionPrincipale         String?   @db.Text
+  objectifsGeneraux         Json?
+  activitesPrincipales      Json?
+  publicCible               String?   @db.VarChar(255)
+  zoneIntervention          String?   @db.VarChar(80)
+  isDeleted                 Boolean   @default(false)
+  deletedAt                 DateTime?
+  deletedBy                 String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  createdBy                 String?
+  updatedBy                 String?
+  userId                    String?   @unique
+  user                      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdByUser             User?     @relation("AssociationCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser             User?     @relation("AssociationUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  deletedByUser             User?     @relation("AssociationDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
+  dirigeants                AssociationDirigeant[]
+  membres                   AssociationMembre[]
+  activites                 AssociationActivite[]
+  partenaires               AssociationPartenaire[]
+  documents                 AssociationDocument[]
+
+  @@map("associations")
+}
+
+model AssociationDirigeant {
+  id                String      @id @default(cuid())
+  associationId     String
+  association       Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  nom               String      @db.VarChar(120)
+  prenom            String      @db.VarChar(120)
+  fonction          String      @db.VarChar(120)
+  telephone         String?     @db.VarChar(50)
+  email             String?     @db.VarChar(255)
+  pieceIdentitePath String?     @db.VarChar(500)
+  dateDebutMandat   DateTime?
+  dateFinMandat     DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@map("association_dirigeants")
+}
+
+model AssociationMembre {
+  id              String      @id @default(cuid())
+  associationId   String
+  association     Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  numeroMembre    String?     @db.VarChar(50)
+  nom             String      @db.VarChar(120)
+  prenom          String      @db.VarChar(120)
+  sexe            Sex?
+  dateNaissance   DateTime?
+  adresse         String?     @db.Text
+  telephone       String?     @db.VarChar(50)
+  email           String?     @db.VarChar(255)
+  role            String?     @db.VarChar(80)
+  dateAdhesion    DateTime?
+  statut          String?     @db.VarChar(40)
+  cotisationAJour Boolean?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("association_membres")
+}
+
+model AssociationActivite {
+  id             String      @id @default(cuid())
+  associationId  String
+  association    Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  nom            String      @db.VarChar(255)
+  description    String?     @db.Text
+  objectif       String?     @db.Text
+  dateDebut      DateTime?
+  dateFin        DateTime?
+  budget         String?     @db.VarChar(120)
+  responsable    String?     @db.VarChar(255)
+  partenaires    String?     @db.Text
+  resultatsImpact String?    @db.Text
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@map("association_activites")
+}
+
+model AssociationPartenaire {
+  id               String      @id @default(cuid())
+  associationId    String
+  association      Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  nom              String      @db.VarChar(255)
+  type             String?     @db.VarChar(80)
+  contact          String?     @db.Text
+  typeAppui        String?     @db.VarChar(120)
+  projetsConcernes String?     @db.Text
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@map("association_partenaires")
+}
+
+model AssociationDocument {
+  id           String      @id @default(cuid())
+  associationId String
+  association  Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  type         String      @db.VarChar(60)
+  titre        String?     @db.VarChar(255)
+  path         String      @db.VarChar(500)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("association_documents")
+}
+
+model Education {
+  id                String          @id @default(cuid())
+  graduateId        String
+  graduate          Jeune @relation(fields: [graduateId], references: [id], onDelete: Cascade)
+  institution       String
+  degree            Diplome         @relation(fields: [diplomeId], references: [id], onDelete: Cascade)
+  fieldOfStudyId    String
+  startYear         Int
+  endYear           Int?
+  currentlyEnrolled Boolean         @default(false)
+  diplomeId         String
+}
+
+model Jeune {
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName          String
+  lastName           String
+  sex                Sex?
+  biography          String?
+  cvUrl              String?
+  imageUrl           String?
+  birthDate          DateTime?
+  phone              String?
+  address            String?
+  hasDisability      Boolean?
+  disabilityType     DisabilityType?
+  graduationYear     Int?
+  degree             String?
+  certifications     String[]
+  languages          NigerLanguage[]
+  socialLinks        Json?
+  education          Education[]
+  jobPreferences     LocationType?
+  skills             String[]
+  isDeleted          Boolean             @default(false)
+  deletedAt          DateTime?
+  deletedBy          String?
+  diplomeId          String?
+  diplome            Diplome?            @relation(fields: [diplomeId], references: [id])
+  isVolunteer        Boolean             @default(false)
+  volunteerSince     DateTime?
+  region             NigerRegion?
+  department         NigerDepartment?
+  isNigerien         Boolean?
+  hasProfessionalExperience Boolean?
+}
