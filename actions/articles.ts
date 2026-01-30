@@ -55,3 +55,43 @@ export async function deleteArticle(id: string) {
     );
   }
 }
+
+export async function createArticle(formData: FormData) {
+  try {
+    const res = await makeAuthenticatedRequest(`${BASE}`, "POST", formData);
+    if (res && typeof res === "object" && "error" in res) {
+      throw new Error((res as { error: string }).error);
+    }
+    if (res instanceof Response) {
+      const d = await res.json();
+      throw new Error((d as { error?: string }).error ?? "Erreur serveur");
+    }
+    return JSON.parse(JSON.stringify(res)) as { data?: unknown; message?: string };
+  } catch (e) {
+    throw new Error(
+      e instanceof Error ? e.message : "Échec de la création de l'article"
+    );
+  }
+}
+
+export async function updateArticle(id: string, formData: FormData) {
+  try {
+    const res = await makeAuthenticatedRequest(
+      `${BASE}/${encodeURIComponent(id)}`,
+      "PUT",
+      formData
+    );
+    if (res && typeof res === "object" && "error" in res) {
+      throw new Error((res as { error: string }).error);
+    }
+    if (res instanceof Response) {
+      const d = await res.json();
+      throw new Error((d as { error?: string }).error ?? "Erreur serveur");
+    }
+    return JSON.parse(JSON.stringify(res)) as { data?: unknown; message?: string };
+  } catch (e) {
+    throw new Error(
+      e instanceof Error ? e.message : "Échec de la mise à jour de l'article"
+    );
+  }
+}

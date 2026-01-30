@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -28,6 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getArticleById, deleteArticle } from "@/actions/articles";
+import { toast } from "sonner";
+import appConfig from "@/settings";
 
 export type ArticleListItem = {
   id: string;
@@ -65,7 +67,10 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
+  Plus,
+  Pencil,
 } from "lucide-react";
+import { ArticlesForm, type ArticleForForm } from "@/components/form/articlesForm";
 
 function displayAuthor(u: ArticleListItem["createdByUser"]): string {
   if (!u) return "—";
@@ -97,6 +102,23 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
   const [viewError, setViewError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ArticleListItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [addFormOpen, setAddFormOpen] = useState(false);
+  const [editArticle, setEditArticle] = useState<ArticleForForm | null>(null);
+  const [editFormOpen, setEditFormOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editFormPending, setEditFormPending] = useState(false);
+  const [addFormPending, setAddFormPending] = useState(false);
+  const [viewDisplayedImage, setViewDisplayedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!viewFull) {
+      setViewDisplayedImage(null);
+      return;
+    }
+    const gallery = Array.isArray(viewFull.gallery) ? (viewFull.gallery as string[]) : [];
+    const main = viewFull.image ?? gallery[0] ?? null;
+    setViewDisplayedImage(main);
+  }, [viewFull?.id, viewFull?.image, viewFull?.gallery]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return initialArticles;
@@ -127,6 +149,35 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
     fetchDetail(a.id);
   };
 
+  const openEdit = async (id: string) => {
+    setEditLoading(true);
+    try {
+      const d = await getArticleById(id);
+      const data = JSON.parse(JSON.stringify(d)) as Record<string, unknown>;
+      const gallery = Array.isArray(data.gallery) ? (data.gallery as string[]) : [];
+      const adapted: ArticleForForm = {
+        id: String(data.id),
+        title: String(data.title ?? ""),
+        description: data.description != null ? String(data.description) : null,
+        link: data.link != null ? String(data.link) : null,
+        image: data.image != null ? String(data.image) : null,
+        gallery,
+        updatedAt: data.updatedAt != null ? String(data.updatedAt) : null,
+      };
+      setEditArticle(adapted);
+      setEditFormOpen(true);
+    } catch (e) {
+      setEditArticle(null);
+      setEditFormOpen(false);
+      toast(`Erreur : ${e instanceof Error ? e.message : "Impossible de charger l'article"}`, {
+        position: "top-right",
+        style: { backgroundColor: "#f03e3e", color: "white" },
+      });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
@@ -151,6 +202,13 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
             {initialArticles.length} article{initialArticles.length !== 1 ? "s" : ""} au total
           </p>
         </div>
+        <Button
+          onClick={() => setAddFormOpen(true)}
+          className="inline-flex items-center gap-2 bg-primaryColor text-white hover:bg-primaryDarkColor dark:bg-primaryDarkColor dark:hover:bg-primaryColor"
+        >
+          <Plus className="h-4 w-4" />
+          Ajouter un article
+        </Button>
       </div>
 
       {/* Barre recherche */}
@@ -216,6 +274,13 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
                       <DropdownMenuItem onClick={() => openView(a)}>
                         <Eye className="mr-2 h-4 w-4" />
                         Voir
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => openEdit(a.id)}
+                        disabled={editLoading}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Modifier
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600 focus:text-red-600 dark:text-red-400"
@@ -303,7 +368,7 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
               {viewArticle?.title}
             </DialogDescription>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             {viewLoading && (
               <div className="flex flex-col items-center justify-center gap-3 py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primaryColor" />
@@ -317,18 +382,55 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
             )}
             {viewFull && !viewLoading && (
               <div className="space-y-6 px-6 py-6">
-                {viewFull.image && (
-                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-                    <Image
-                      src={getImageSrc(viewFull.image, viewFull.updatedAt)}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 100vw, 672px"
-                      unoptimized={String(viewFull.image ?? "").startsWith("/api/")}
-                    />
-                  </div>
-                )}
+                <div className="space-y-3">
+                  {viewDisplayedImage && (
+                    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+                      <Image
+                        src={getImageSrc(viewDisplayedImage, viewFull.updatedAt)}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 100vw, 672px"
+                        unoptimized={String(viewDisplayedImage).startsWith("/api/")}
+                      />
+                    </div>
+                  )}
+                  {!viewDisplayedImage && (
+                    <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-gray-800">
+                      Aucune image
+                    </div>
+                  )}
+                  {(() => {
+                    const gallery = Array.isArray(viewFull.gallery) ? (viewFull.gallery as string[]) : [];
+                    const allPaths = [...new Set((viewFull.image ? [viewFull.image, ...gallery] : gallery).filter(Boolean) as string[])];
+                    if (allPaths.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap gap-2">
+                        {allPaths.map((path) => (
+                          <button
+                            key={path}
+                            type="button"
+                            onClick={() => setViewDisplayedImage(path)}
+                            className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 bg-gray-100 transition-all hover:opacity-90 dark:bg-gray-800 ${
+                              viewDisplayedImage === path
+                                ? "border-primaryColor ring-2 ring-primaryColor ring-offset-2 dark:ring-offset-gray-900"
+                                : "border-transparent"
+                            }`}
+                          >
+                            <Image
+                              src={getImageSrc(path, viewFull.updatedAt)}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              sizes="56px"
+                              unoptimized={String(path).startsWith("/api/")}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                     {viewFull.title}
@@ -425,6 +527,124 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Ajouter un article */}
+      <Dialog
+        open={addFormOpen}
+        onOpenChange={(open) => {
+          setAddFormOpen(open);
+          if (!open) setAddFormPending(false);
+        }}
+      >
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl sm:rounded-2xl">
+          <div className="flex-shrink-0 rounded-t-2xl bg-gradient-to-r from-primaryColor to-primaryDarkColor px-6 py-5 pr-14">
+            <DialogTitle className="text-lg font-semibold text-white">
+              Ajouter un article
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-sm text-white/85">
+              Remplissez les champs puis enregistrez.
+            </DialogDescription>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6">
+            <ArticlesForm
+              layout="modal"
+              formId="add-article-form"
+              onClose={() => setAddFormOpen(false)}
+              onPendingChange={setAddFormPending}
+            />
+          </div>
+          <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setAddFormOpen(false)} disabled={addFormPending}>
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                form="add-article-form"
+                disabled={addFormPending}
+                style={{ backgroundColor: appConfig.secondaryColor }}
+                className="text-white hover:opacity-90"
+              >
+                {addFormPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Envoi…
+                  </>
+                ) : (
+                  "Ajouter l'article"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Modifier un article */}
+      <Dialog
+        open={editFormOpen}
+        onOpenChange={(open) => {
+          setEditFormOpen(open);
+          if (!open) {
+            setEditArticle(null);
+            setEditFormPending(false);
+          }
+        }}
+      >
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl sm:rounded-2xl">
+          <div className="flex-shrink-0 rounded-t-2xl bg-gradient-to-r from-primaryColor to-primaryDarkColor px-6 py-5 pr-14">
+            <DialogTitle className="text-lg font-semibold text-white">
+              Modifier l&apos;article
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-sm text-white/85">
+              {editArticle?.title ?? "—"}
+            </DialogDescription>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6">
+            {editArticle && (
+              <ArticlesForm
+                article={editArticle}
+                layout="modal"
+                formId="edit-article-form"
+                onClose={() => {
+                  setEditFormOpen(false);
+                  setEditArticle(null);
+                }}
+                onPendingChange={setEditFormPending}
+              />
+            )}
+          </div>
+          <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditFormOpen(false);
+                  setEditArticle(null);
+                }}
+                disabled={editFormPending}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                form="edit-article-form"
+                disabled={editFormPending}
+                style={{ backgroundColor: appConfig.secondaryColor }}
+                className="text-white hover:opacity-90"
+              >
+                {editFormPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement…
+                  </>
+                ) : (
+                  "Enregistrer les modifications"
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
