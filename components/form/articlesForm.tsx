@@ -202,7 +202,7 @@ export function ArticlesForm({ onClose, article, layout = "standalone", formId =
                       type="text"
                       placeholder="Veuillez saisir le titre de l'article"
                       disabled={isPending}
-                      className="bg-white dark:bg-gray-900"
+                      className={isModal ? "rounded-lg border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}
                     />
                   </FormControl>
                   <FormMessage />
@@ -224,7 +224,7 @@ export function ArticlesForm({ onClose, article, layout = "standalone", formId =
                       value={field.value ?? ""}
                       placeholder="Description de l'article (optionnel)"
                       disabled={isPending}
-                      className="min-h-[100px] bg-white dark:bg-gray-900"
+                      className={isModal ? "min-h-[100px] rounded-lg border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" : "min-h-[100px] bg-white dark:bg-gray-900"}
                     />
                   </FormControl>
                   <FormMessage />
@@ -247,7 +247,7 @@ export function ArticlesForm({ onClose, article, layout = "standalone", formId =
                       value={field.value ?? ""}
                       placeholder="https://… (optionnel)"
                       disabled={isPending}
-                      className="bg-white dark:bg-gray-900"
+                      className={isModal ? "rounded-lg border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}
                     />
                   </FormControl>
                   <FormMessage />
@@ -286,7 +286,7 @@ export function ArticlesForm({ onClose, article, layout = "standalone", formId =
                         type="file"
                         accept="image/*"
                         disabled={isPending}
-                        className="bg-white dark:bg-gray-900"
+                        className={isModal ? "rounded-lg border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           field.onChange(file ?? null);
@@ -352,7 +352,7 @@ export function ArticlesForm({ onClose, article, layout = "standalone", formId =
                       accept="image/*"
                       multiple
                       disabled={isPending}
-                      className="bg-white dark:bg-gray-900"
+                      className={isModal ? "rounded-lg border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}
                       onChange={(e) => {
                         const list = e.target.files;
                         const files = list ? Array.from(list) : [];

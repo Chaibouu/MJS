@@ -557,7 +557,14 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
           </div>
           <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setAddFormOpen(false)} disabled={addFormPending}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAddFormOpen(false);
+                  setAddFormPending(false);
+                }}
+                disabled={addFormPending}
+              >
                 Annuler
               </Button>
               <Button
@@ -622,6 +629,7 @@ export function Articles({ articles: initialArticles }: ArticlesProps) {
                 onClick={() => {
                   setEditFormOpen(false);
                   setEditArticle(null);
+                  setEditFormPending(false);
                 }}
                 disabled={editFormPending}
               >
